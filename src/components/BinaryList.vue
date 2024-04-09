@@ -67,7 +67,6 @@
             const result = await invoke('benchmark_binary', { binaries: this.selectedBinaries });
             console.log(`Résultat du benchmark pour ${binary}:`, result);
           }
-          alert("Benchmark(s) completé(s). Voir la console pour les détails.");
         } catch (err) {
           console.error("Erreur lors du benchmark des binaires sélectionnés:", err);
           alert("Erreur lors du benchmark. Voir la console pour les détails.");
