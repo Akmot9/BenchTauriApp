@@ -9,7 +9,10 @@ use std::os::unix::fs::PermissionsExt;
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![list_binaries])
+        .invoke_handler(tauri::generate_handler![
+            list_binaries, 
+            benchmark_binary
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -36,5 +39,14 @@ fn is_binary(path: &Path) -> bool {
         metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
     } else {
         false
+    }
+}
+
+#[command]
+fn benchmark_binary(binaries: Vec<String>) {
+    println!("Démarrage du benchmark pour les binaires sélectionnés:");
+    for binary in binaries {
+        println!("Benchmarking: {}", binary);
+        // Ajoutez ici votre logique de benchmark réelle pour chaque binaire
     }
 }
