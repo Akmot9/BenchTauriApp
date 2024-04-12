@@ -1,50 +1,96 @@
 <template>
     <div>
-      <canvas id="memoryChart"></canvas>
-      <button @click="loadData">Load Data</button>
+      <canvas id="statsChart"></canvas>
     </div>
   </template>
   
   <script>
-  import { invoke } from '@tauri-apps/api';
-  import { Chart, registerables } from 'chart.js';
-  Chart.register(...registerables);
-  
-  export default {
-    methods: {
-        loadData() {
-  invoke('get_memory_usage')
-    .then((data) => {
-      const parsedData = data.map(line => {
-        const parts = line.split(', ');
-        // S'assurer qu'il y a bien trois parties et que parts[2] existe
-        if (parts.length === 3 && parts[2]) {
-          const second = parseInt(parts[0].replace('s', ''), 10);
-          const memory = parseInt(parts[2].replace(' KB', ''), 10);
-          return { second, memory };
-        }
-        return null;
-      }).filter(d => d !== null); // Filtrer les entrées nulles
+import { Chart, registerables } from 'chart.js';
+import 'chartjs-adapter-date-fns'; // Importe l'adaptateur
 
-      const labels = parsedData.map(d => `${d.second}s`);
-      const memoryData = parsedData.map(d => d.memory);
+Chart.register(...registerables);
 
-      new Chart(document.getElementById('memoryChart'), {
+export default {
+  props: {
+    statistics: {
+      type: Object,
+      required: true
+    }
+  },
+  data() {
+    return {
+      chart: null,
+    };
+  },
+  watch: {
+    statistics: {
+      handler(newVal) {
+        this.updateChartData(newVal);
+      },
+      deep: true
+    }
+  },
+  mounted() {
+    this.initChart();
+  },
+  methods: {
+    initChart() {
+      const ctx = document.getElementById('statsChart').getContext('2d');
+      this.chart = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: labels,
-          datasets: [{
-            label: 'Memory Usage (KB)',
-            data: memoryData,
-            fill: false,
-            borderColor: 'rgb(75, 192, 192)',
-            tension: 0.1
-          }]
+          labels: [], // Les timestamps seront ajoutés ici
+          datasets: [
+            {
+              label: 'CPU Usage (%)',
+              backgroundColor: 'rgba(255, 99, 132, 0.2)',
+              borderColor: 'rgba(255, 99, 132, 1)',
+              data: [], // Les données CPU seront ajoutées ici
+            },
+            {
+              label: 'Memory Usage (%)',
+              backgroundColor: 'rgba(54, 162, 235, 0.2)',
+              borderColor: 'rgba(54, 162, 235, 1)',
+              data: [], // Les données Memory seront ajoutées ici
+            }
+          ]
+        },
+        options: {
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                unit: 'second'
+              }
+            }
+          }
         }
       });
-    })
-    .catch(console.error);
-}
-  }}
-  </script>
+    },
+    updateChartData(statistics) {
+        if (this.chart) {
+            const newLabels = statistics.entries.map(entry => new Date(entry.time * 1000));
+            const newCpuData = statistics.entries.map(entry => {
+            const cpuStat = entry.stats.find(stat => stat.name === 'CPU');
+            return cpuStat ? cpuStat.cpu : null;
+            });
+            const newMemData = statistics.entries.map(entry => {
+            const memStat = entry.stats.find(stat => stat.name === 'Memory');
+            return memStat ? memStat.mem : null;
+            });
+
+            requestAnimationFrame(() => {
+            this.chart.data.labels = newLabels;
+            this.chart.data.datasets[0].data = newCpuData;
+            this.chart.data.datasets[1].data = newMemData;
+            this.chart.update();
+            });
+        }
+        }
+
+
+  }
+};
+</script>
+
   

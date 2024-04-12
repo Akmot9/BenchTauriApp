@@ -4,12 +4,12 @@
 
 mod benchstate;
 
-use std::time::{SystemTime, UNIX_EPOCH};
 use std::fs;
 use std::path::Path;
 use std::sync::{mpsc, Mutex};
 use benchstate::{BenchState, Statistic};
-use tauri::{command, AppHandle, Manager};
+use serde_json::json;
+use tauri::{command, AppHandle, Manager, Window};
 use std::os::unix::fs::PermissionsExt;
 
 fn main() {
@@ -53,9 +53,8 @@ fn is_binary(path: &Path) -> bool {
 use std::{process::{Command, Stdio}, thread, time::Duration};
 
 
-
 #[command]
-async fn benchmark_binary(binaries: Vec<String>, app: AppHandle) {
+async fn benchmark_binary(binaries: Vec<String>, app: AppHandle, window: Window) {
     println!("Démarrage du benchmark pour les binaires sélectionnés...");
 
     let (tx, rx) = mpsc::channel();
@@ -63,57 +62,64 @@ async fn benchmark_binary(binaries: Vec<String>, app: AppHandle) {
 
     // Thread récepteur
     let app_for_thread = app.clone();
+    let window_for_thread = window.clone();
     let receiver_handle = thread::spawn(move || {
-        println!("Thread récepteur démarré.");
         let state = app_for_thread.state::<Mutex<BenchState>>();
-        for stat in rx {
+        while let Ok(stat) = rx.recv() {
             println!("Réception d'une stat: {:?}", stat);
             let mut state_guard = state.lock().unwrap();
             state_guard.add_statistic(stat);
+
+            // Send the updated statistics to the frontend
+            let stats_json = json!(state_guard.statistics);
+            window_for_thread.emit("update_statistics", stats_json)
+                .expect("Failed to send statistics");
+            println!("ok");
         }
         println!("Thread récepteur terminé.");
-        println!("Statistiques: {}", state.lock().unwrap().statistics);
-    });
+        });
 
     // Threads émetteurs pour chaque binaire
     for binary in binaries.into_iter() {
         let tx_clone = tx.clone();
         println!("Démarrage du benchmark pour '{}'", binary);
         let handle = thread::spawn(move || {
-            let mut output = Command::new(&binary)
+            let output = Command::new(&binary)
                 .stdout(Stdio::null())
-                .spawn()
-                .expect("Échec du démarrage du binaire");
+                .spawn();
 
-            let pid = output.id();
-            println!("Binaire '{}' démarré avec PID: {}", binary, pid);
+            if let Ok(mut child) = output {
+                let pid = child.id();
+                println!("Binaire '{}' démarré avec PID: {}", binary, pid);
 
-            loop {
-                println!("boucle {:?}", output);
-                if let Ok(None) = output.try_wait() {
-
+                while let Ok(None) = child.try_wait() {
                     let output = Command::new("ps")
                         .args(&["-o", "rss,%mem,vsz,%cpu,ni=", "-p", &pid.to_string()])
                         .output()
                         .expect("Échec de l'exécution de la commande ps");
 
                     let output_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
-
                     if !output_str.is_empty() {
                         let parts: Vec<&str> = output_str.split_whitespace().collect();
-                        match parse_statistic(&parts, &binary) {
-                            Ok(stat) => {
-                                println!("Sending stat for '{}': {}", binary, stat);
-                                tx_clone.send(stat).expect("Failed to send stat");
-                            },
-                            Err(e) => println!("Error parsing statistic: {}", e),
+                        if let Ok(stat) = parse_statistic(&parts, &binary) {
+                            println!("Sending stat for '{}': {}", binary, stat);
+                            tx_clone.send(stat).expect("Failed to send stat");
                         }
                     }
                     thread::sleep(Duration::from_secs(1));
-                } else {
-                    println!("Binaire '{}' terminé.", binary);
-                    break;
                 }
+                println!("Binaire '{}' terminé.", binary);
+                // Send a final empty stat to indicate termination
+                tx_clone.send(Statistic {
+                    name: binary.clone(),
+                    rss: 0,
+                    mem: 0.0,
+                    vsz: 0,
+                    cpu: 0.0,
+                    ni: 0,
+                }).expect("Failed to send termination stat");
+            } else {
+                println!("Failed to start '{}'.", binary);
             }
         });
         emitter_handles.push(handle);
@@ -123,8 +129,6 @@ async fn benchmark_binary(binaries: Vec<String>, app: AppHandle) {
     for handle in emitter_handles {
         handle.join().expect("Un thread émetteur a paniqué.");
     }
-    println!("Tous les benchmarks binaires sont terminés.");
-
     drop(tx); // Fermer le canal en laissant tomber l'expéditeur
     receiver_handle.join().expect("Le thread récepteur a paniqué.");
     println!("Benchmarking et réception des statistiques terminés.");
@@ -143,12 +147,6 @@ fn parse_statistic(parts: &[&str], binary: &str) -> Result<Statistic, String> {
             .map_err(|e| format!("Error parsing %CPU: {}", e))?;
         let ni = parts[len - 1].parse::<i32>()
             .map_err(|e| format!("Error parsing NI: {}", e))?;
-
-        let current_time = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|e| format!("Error calculating time: {}", e))?
-            .as_secs(); // Gets the current time in seconds since the Unix Epoch
-
 
         Ok(Statistic {
             name: binary.to_string(),

@@ -1,7 +1,9 @@
 use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-#[derive(Debug)]
+use serde::Serialize;
+
+#[derive(Debug,Serialize)]
 pub struct Statistic {
     pub name: String,
     pub rss: u64,
@@ -11,13 +13,13 @@ pub struct Statistic {
     pub ni: i32,
 }
 
-#[derive(Debug)]
+#[derive(Debug,Serialize)]
 pub struct StatisticsEntry {
     pub time: u64,
     pub stats: Vec<Statistic>,
 }
 
-#[derive(Debug)]
+#[derive(Debug,Serialize)]
 pub struct Statistics {
     pub entries: Vec<StatisticsEntry>,
 }

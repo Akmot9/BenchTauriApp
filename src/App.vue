@@ -1,18 +1,18 @@
 <template>
   <div id="app">
-    <Chart />
+    <ChartDad />
     <BinaryList />
   </div>
 </template>
 
 <script>
 import BinaryList from './components/BinaryList.vue';
-import Chart from './components/Chart.vue';
+import ChartDad from './components/ChartDad.vue';
 export default {
   name: 'App',
   components: {
     BinaryList,
-    Chart
+    ChartDad
   }
 }
 </script>
