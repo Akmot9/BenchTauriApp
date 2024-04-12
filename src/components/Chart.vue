@@ -1,96 +1,90 @@
 <template>
     <div>
-      <canvas id="statsChart"></canvas>
+      <canvas id="systemUsageChart"></canvas>
     </div>
   </template>
   
   <script>
-import { Chart, registerables } from 'chart.js';
-import 'chartjs-adapter-date-fns'; // Importe l'adaptateur
-
-Chart.register(...registerables);
-
-export default {
-  props: {
+  import { Chart, registerables } from 'chart.js';
+  
+  export default {
+    name: 'SystemUsageChart',
+    data() {
+      return {
+        chart: null,
+      };
+    },
+    props: {
     statistics: {
       type: Object,
       required: true
     }
-  },
-  data() {
-    return {
-      chart: null,
-    };
-  },
-  watch: {
+    },
+    watch: {
     statistics: {
       handler(newVal) {
         this.updateChartData(newVal);
       },
       deep: true
     }
-  },
-  mounted() {
-    this.initChart();
-  },
-  methods: {
-    initChart() {
-      const ctx = document.getElementById('statsChart').getContext('2d');
+    },
+    mounted() {
+      Chart.register(...registerables);
+  
+      const ctx = document.getElementById('systemUsageChart').getContext('2d');
       this.chart = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: [], // Les timestamps seront ajoutés ici
+          labels: ['10:00', '10:05', '10:10', '10:15', '10:20', '10:25'], // Times of measurement
           datasets: [
             {
-              label: 'CPU Usage (%)',
-              backgroundColor: 'rgba(255, 99, 132, 0.2)',
-              borderColor: 'rgba(255, 99, 132, 1)',
-              data: [], // Les données CPU seront ajoutées ici
+              label: 'Memory Usage (MB)',
+              data: [120, 130, 125, 135, 140, 145], // Memory usage in MB
+              fill: false,
+              borderColor: 'rgb(75, 192, 192)',
+              tension: 0.1
             },
             {
-              label: 'Memory Usage (%)',
-              backgroundColor: 'rgba(54, 162, 235, 0.2)',
-              borderColor: 'rgba(54, 162, 235, 1)',
-              data: [], // Les données Memory seront ajoutées ici
+              label: 'CPU Usage (%)',
+              data: [20, 25, 15, 30, 20, 45], // CPU usage in percentage
+              fill: false,
+              borderColor: 'rgb(255, 99, 132)',
+              tension: 0.1
             }
           ]
         },
         options: {
           scales: {
+            y: {
+              beginAtZero: false, // Start from the lowest data value
+              title: {
+                display: true,
+                text: 'Usage'
+              }
+            },
             x: {
-              type: 'time',
-              time: {
-                unit: 'second'
+              title: {
+                display: true,
+                text: 'Time'
               }
             }
-          }
+          },
+          responsive: true,
+          maintainAspectRatio: false
         }
       });
     },
-    updateChartData(statistics) {
-        if (this.chart) {
-            const newLabels = statistics.entries.map(entry => new Date(entry.time * 1000));
-            const newCpuData = statistics.entries.map(entry => {
-            const cpuStat = entry.stats.find(stat => stat.name === 'CPU');
-            return cpuStat ? cpuStat.cpu : null;
-            });
-            const newMemData = statistics.entries.map(entry => {
-            const memStat = entry.stats.find(stat => stat.name === 'Memory');
-            return memStat ? memStat.mem : null;
-            });
-
-            requestAnimationFrame(() => {
-            this.chart.data.labels = newLabels;
-            this.chart.data.datasets[0].data = newCpuData;
-            this.chart.data.datasets[1].data = newMemData;
-            this.chart.update();
-            });
+    methods: {
+        updateChartData(statistics){
+            console.log("stats in char",statistics);
+            this.chart.data.labels +=1
         }
-        }
-
-
+    },
+    beforeDestroy() {
+      if (this.chart) {
+        this.chart.destroy();
+      }
+    }
   }
-};
-</script>
-
+  </script>
   
