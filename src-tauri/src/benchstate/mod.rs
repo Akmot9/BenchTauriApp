@@ -13,23 +13,19 @@ pub struct Statistic {
     pub ni: i32,
 }
 
-#[derive(Debug,Serialize)]
-pub struct StatisticsEntry {
-    pub time: u64,
-    pub stats: Vec<Statistic>,
-}
-
-#[derive(Debug,Serialize)]
-pub struct Statistics {
-    pub entries: Vec<StatisticsEntry>,
-}
-
 impl fmt::Display for Statistic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, r#"        {{
           "name": "{}", "rss": {}, "mem": {}, "vsz": {}, "cpu": {}, "ni": {}
         }}"#, self.name, self.rss, self.mem, self.vsz, self.cpu, self.ni)
     }
+}
+
+
+#[derive(Debug,Serialize)]
+pub struct StatisticsEntry {
+    pub time: u64,
+    pub stats: Vec<Statistic>,
 }
 
 impl fmt::Display for StatisticsEntry {
@@ -44,6 +40,11 @@ impl fmt::Display for StatisticsEntry {
         }
         write!(f, "\n      ]\n    }}")
     }
+}
+
+#[derive(Debug,Serialize)]
+pub struct Statistics {
+    pub entries: Vec<StatisticsEntry>,
 }
 
 impl fmt::Display for Statistics {

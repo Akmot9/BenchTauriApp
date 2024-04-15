@@ -49,11 +49,11 @@ fn start_receiver_thread(app: AppHandle, window: Window, rx: mpsc::Receiver<Stat
     thread::spawn(move || {
         let state = app.state::<Mutex<BenchState>>();
         while let Ok(stat) = rx.recv() {
-            println!("Received stat: {:?}", stat);
             let mut state_guard = state.lock().unwrap();
             state_guard.add_statistic(stat);
 
             let stats_json = json!(state_guard.statistics);
+            
             window.emit("update_statistics", stats_json)
                 .expect("Failed to send statistics");
         }
@@ -93,7 +93,7 @@ fn monitor_process(mut child: std::process::Child, binary: String, tx: mpsc::Sen
                 if let Ok(stat) = stats {
                     tx.send(stat).expect("Failed to send stat");
                 }
-                thread::sleep(Duration::from_secs(1));
+                thread::sleep(Duration::from_secs(3));
             }
             Err(_) => break, // Process handling error
         }

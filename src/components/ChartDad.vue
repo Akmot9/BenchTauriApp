@@ -1,7 +1,10 @@
 <template>
   <div>
     <h1>System Statistics</h1>
-    <chart v-if="statistics" :statistics="statistics"></chart>
+    <statistic-chart v-if="statistics" :data="statistics" statKey="cpu"></statistic-chart>
+    <statistic-chart v-if="statistics" :data="statistics" statKey="mem"></statistic-chart>
+    <statistic-chart v-if="statistics" :data="statistics" statKey="vsz"></statistic-chart>
+
     <div v-else>
       <p>Loading statistics...</p>
     </div>
@@ -9,37 +12,42 @@
 </template>
 
 <script>
-import Chart from './Chart.vue';
+import StatisticChart from './StatisticChart.vue';
 import { listen } from '@tauri-apps/api/event';
 
 export default {
   components: {
-    Chart
+    StatisticChart
   },
   data() {
     return {
-      statistics: null
+      statistics: null,
+      unlistenEvent: null  // This will hold the unlisten function
     };
   },
   mounted() {
     this.initializeStatisticsListener();
   },
+  beforeDestroy() {
+    this.cleanupListeners();  // Clean up the listener when the component is destroyed
+  },
   methods: {
-    initializeStatisticsListener() {
-      listen('update_statistics', (event) => {
-        console.log("Received event with data:", event.payload);
-        if (event.payload) {
-          try {
-            // Directly assigning the payload to statistics as it is already an object
-            this.statistics = event.payload;
-            console.log('Statistics updated:', this.statistics);
-          } catch (error) {
-            console.error('Error handling statistics:', error);
-          }
-        }
-      }).catch(error => {
-        console.error('Failed to initialize statistics listener:', error);
+    async initializeStatisticsListener() {
+      // The listen function returns a Promise that resolves to the unlisten function
+      this.unlistenEvent = await listen('update_statistics', (event) => {
+        this.handleStatisticsUpdate(event.payload);
       });
+    },
+    handleStatisticsUpdate(payload) {
+      if (payload) {
+        this.statistics = payload;
+      }
+    },
+    async cleanupListeners() {
+      if (this.unlistenEvent) {
+        await this.unlistenEvent();  // Call the unlisten function to remove the event listener
+        console.log('Event listener cleaned up successfully.');
+      }
     }
   }
 };
