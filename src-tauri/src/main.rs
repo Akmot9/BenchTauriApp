@@ -6,10 +6,9 @@ mod benchstate;
 
 use std::fs;
 use std::path::Path;
-use std::sync::{mpsc, Mutex};
-use benchstate::{BenchState, Statistic};
-use serde_json::json;
-use tauri::{command, AppHandle, Manager, Window};
+use std::sync::Mutex;
+use benchstate::BenchState;
+use tauri::{command, AppHandle, Window};
 use std::os::unix::fs::PermissionsExt;
 
 fn main() {

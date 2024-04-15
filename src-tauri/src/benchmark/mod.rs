@@ -44,7 +44,6 @@ fn wait_for_receiver_thread(receiver_handle: thread::JoinHandle<()>) {
 
 
 
-
 // Sets up the receiver thread that listens for statistics and updates the UI.
 fn start_receiver_thread(app: AppHandle, window: Window, rx: mpsc::Receiver<Statistic>) -> thread::JoinHandle<()> {
     thread::spawn(move || {
