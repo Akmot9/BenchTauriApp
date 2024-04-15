@@ -37,6 +37,10 @@
         searchQuery: ''
       };
     },
+    mounted() {
+      this.fetchBinaries();
+    },
+
     methods: {
       async fetchBinaries() {
         try {
@@ -64,7 +68,7 @@
         try {
           for (const binary of this.selectedBinaries) {
             // Remplacez 'benchmark_binary' par le nom de votre commande Tauri
-            const result = await invoke('benchmark_binary', { binaries: this.selectedBinaries });
+            const result = await invoke('benchmark', { binaries: this.selectedBinaries });
             console.log(`Résultat du benchmark pour ${binary}:`, result);
           }
         } catch (err) {

@@ -1,5 +1,6 @@
 <template>
     <div>
+      <div>{{ stats }}</div>
       <canvas id="systemUsageChart"></canvas>
     </div>
   </template>
@@ -11,6 +12,8 @@
     name: 'SystemUsageChart',
     data() {
       return {
+        stats: null,
+        stat: null,
         chart: null,
       };
     },
@@ -77,6 +80,8 @@
     methods: {
         updateChartData(statistics){
             console.log("stats in char",statistics);
+            this.stats = statistics
+            this.chart.data.labels +=1
             this.chart.data.labels +=1
         }
     },
